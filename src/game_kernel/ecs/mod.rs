@@ -23,37 +23,36 @@ pub struct World
 impl World
 {
     //moves all the children from one parent to a new one
-    fn move_children(&mut self, old_parent: &u64, new_parent: &u64)
+    fn move_children(&mut self, old_parent: &u64, new_parent: &u64) -> bool
     {
-        let new_parent_children = &mut self.hierarchy.get_mut(&new_parent).unwrap().1 as * mut HashSet<u64>;
-        unsafe
+        let mut new_parent_children = self.hierarchy.remove(&new_parent)/*.unwrap().1*/;
+        if(new_parent_children.is_none())
         {
-            for child in self.hierarchy.get(&old_parent).unwrap().1.iter()
-            {
-                (*new_parent_children).insert(child.clone());
-            }
+            return false;
         }
+        let mut new_parent_children = new_parent_children.unwrap().1;
+        for child in self.hierarchy.get(&old_parent).unwrap().1.iter()
+        {
+            new_parent_children.insert(child.clone());
+        }
+        true
     }
 
     //deletes entities recursively
     fn recursive_delete(&mut self, parent: &u64) -> bool
     {
-        let self_ptr = self as *mut Self;
-        unsafe
+        let children = self.hierarchy.remove(parent);
+        if(children.is_none())
         {
-            for child in self.hierarchy.get(&parent).unwrap().1.iter()
-            {
-                (*self_ptr).recursive_delete(child);
-            }
+            return false;
         }
-        if let None = self.hierarchy.remove(parent)
+
+        let children = children.unwrap();
+        for child in children.1.iter()
         {
-            false
+           self.recursive_delete(child);
         }
-        else
-        {
-            true
-        }
+        true
     }
 
     /// this function will create and add ann entity to the world as a chilf of the specified parent
@@ -81,11 +80,13 @@ impl World
     pub fn rem_entity(& mut self, entity:u64, new_parent: u64) -> Result<(), &str>
     {
         //moves all children
-        self.move_children(&entity, &new_parent);
-        match self.hierarchy.remove(&entity)
+        if self.move_children(&entity, &new_parent)
         {
-            Some(_) => Ok(()),
-            None => Err("unable to find the entity to remove")
+            Ok(())
+        }
+        else
+        {
+            Err("unable to find the entity to remove")
         }
     }
 
