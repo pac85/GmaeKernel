@@ -18,6 +18,7 @@ pub struct World
     indexer : entity::EntityIndexer,
     component_factory: component::ComponentFactory,
     hierarchy: entity::AdjHashMap<entity::Entity>,
+    views: Vec <Box<views::View<Item=entity::Entity>> >,
 }
 
 impl World
@@ -26,7 +27,7 @@ impl World
     fn move_children(&mut self, old_parent: &u64, new_parent: &u64) -> bool
     {
         let mut new_parent_children = self.hierarchy.remove(&new_parent)/*.unwrap().1*/;
-        if(new_parent_children.is_none())
+        if new_parent_children.is_none()
         {
             return false;
         }
@@ -42,7 +43,7 @@ impl World
     fn recursive_delete(&mut self, parent: &u64) -> bool
     {
         let children = self.hierarchy.remove(parent);
-        if(children.is_none())
+        if children.is_none()
         {
             return false;
         }
@@ -53,6 +54,11 @@ impl World
            self.recursive_delete(child);
         }
         true
+    }
+
+    pub fn register_view(&mut self, view: Box<views::View<Item=entity::Entity> >)
+    {
+        self.views.push(view);
     }
 
     /// this function will create and add ann entity to the world as a chilf of the specified parent
