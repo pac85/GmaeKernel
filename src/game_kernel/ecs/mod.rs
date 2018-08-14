@@ -1,7 +1,7 @@
-///! ECS root module
-///! =======
-///! This module contains the word structure, the rest of the ecs is in the submodules
-///! -----------
+//! ECS root module
+//! =======
+//! This module contains the word structure, the rest of the ecs is in the submodules
+//! -----------
 
 mod component;
 mod entity;
@@ -18,7 +18,7 @@ pub struct World
     indexer : entity::EntityIndexer,
     component_factory: component::ComponentFactory,
     hierarchy: entity::AdjHashMap<entity::Entity>,
-    views: Vec <Box<views::View<Item=entity::Entity>> >,
+    views: Vec <views::ViewRef>,
 }
 
 impl World
@@ -56,12 +56,38 @@ impl World
         true
     }
 
-    pub fn register_view(&mut self, view: Box<views::View<Item=entity::Entity> >)
+    //this funvtion updates the views when an entity is added
+    fn update_views_on_added(&self, entity_index: u64)
     {
-        self.views.push(view);
+        for view in self.views.iter()
+        {
+            (view.on_enity_added)(entity_index);
+        }
     }
 
-    /// this function will create and add ann entity to the world as a chilf of the specified parent
+    //this funvtion updates the views when an entity is added
+    fn update_views_on_removed(&self, entity_index: u64)
+    {
+        for view in self.views.iter()
+            {
+                (view.on_enity_removed)(entity_index);
+            }
+    }
+
+    /// This function will register a view.
+    /// # Examples
+    /// '''
+    /// //TestView implements View
+    /// register_view::<TestView>()
+    /// '''
+    pub fn register_view<T>(&mut self)
+        where T: views::View<Item=entity::Entity> + 'static
+    {
+        self.views.push(views::ViewRef::new::<T>());
+        T::on_register(&self.hierarchy);
+    }
+
+    /// this function will create and add ann entity to the world as a child of the specified parent
     /// # Errors
     /// if the specified parent does not exist it will return an Error, otherwise an Ok containing the Entity index
     pub fn add_entity(& mut self, parent: u64) -> Result<u64, &str>
