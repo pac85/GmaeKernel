@@ -3,8 +3,10 @@
 //! This module contains the word structure, the rest of the ecs is in the submodules
 //! -----------
 
-mod component;
-mod entity;
+pub mod entity;
+pub mod component;
+pub mod system;
+
 mod views;
 
 use std::collections::HashSet;
@@ -101,6 +103,7 @@ impl World
             None => return Err("unable to insert the entity in the hierarchy, parent not found")
         }
         self.hierarchy.insert(new_index, (entity::Entity::new(), HashSet::new()));
+        self.update_views_on_added(new_index);
         Ok(new_index)
     }
 
@@ -114,6 +117,7 @@ impl World
         //moves all children
         if self.move_children(&entity, &new_parent)
         {
+            self.update_views_on_removed(entity);
             Ok(())
         }
         else
@@ -131,6 +135,7 @@ impl World
     {
         if self.recursive_delete(&entity)
         {
+            self.update_views_on_removed(entity);
             return Ok(())
         }
         else
