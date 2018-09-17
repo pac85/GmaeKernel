@@ -11,7 +11,7 @@ mod views;
 
 use std::collections::HashSet;
 use std::collections::HashMap;
-
+use evmap::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -28,13 +28,14 @@ impl World
     //moves all the children from one parent to a new one
     fn move_children(&mut self, old_parent: &u64, new_parent: &u64) -> bool
     {
-        let mut new_parent_children = self.hierarchy.remove(&new_parent)/*.unwrap().1*/;
+        self.hierarchy.w.lock();
+        let mut new_parent_children = self.hierarchy.w.remove(&new_parent)/*.unwrap().1*/;
         if new_parent_children.is_none()
         {
             return false;
         }
         let mut new_parent_children = new_parent_children.unwrap().1;
-        for child in self.hierarchy.get(&old_parent).unwrap().1.iter()
+        for child in self.hierarchy.w.get(&old_parent).unwrap().1.iter()
         {
             new_parent_children.insert(child.clone());
         }
