@@ -17,34 +17,42 @@ use std::rc::Rc;
 
 pub struct World
 {
-    indexer : entity::EntityIndexer,
     component_factory: component::ComponentFactory,
-    hierarchy: entity::AdjHashMap<entity::Entity>,
+    hierarchy: entity::AdjHashMap,
     views: Vec <views::ViewRef>,
 }
 
 impl World
 {
-    //moves all the children from one parent to a new one
+    //moves all the children from one parent to a new one, return false if it can't find
+    //the new parent, true otherwise
     fn move_children(&mut self, old_parent: &u64, new_parent: &u64) -> bool
     {
-        self.hierarchy.w.lock();
-        let mut new_parent_children = self.hierarchy.w.remove(&new_parent)/*.unwrap().1*/;
-        if new_parent_children.is_none()
+        let mut hierarchy_w = self.hierarchy.w.lock();
+        let mut hierarchy_r = self.hierarchy.r;
+        //checks if the new parent exists
+        if !self.hierarchy.exists(new_parent)
         {
             return false;
         }
-        let mut new_parent_children = new_parent_children.unwrap().1;
-        for child in self.hierarchy.w.get(&old_parent).unwrap().1.iter()
-        {
-            new_parent_children.insert(child.clone());
-        }
+        //copies all the children of old_parent to the new parent
+        hierarchy_r.get_and(&old_parent, |children|{
+            for child in children {
+                hierarchy_w.insert(new_parent.clone(), child.clone());
+            }
+        });
+        //removes the children from the old parent
+        hierarchy_w.clear(old_parent.clone());
+        hierarchy_w.flush();
+
         true
     }
 
     //deletes entities recursively
-    fn recursive_delete(&mut self, parent: &u64) -> bool
+    fn recursive_delete<F>(&mut self, parent: &u64, on_delete: F) -> bool
+        where F: FnOnce(u64)
     {
+        /*
         let children = self.hierarchy.remove(parent);
         if children.is_none()
         {
@@ -56,6 +64,26 @@ impl World
         {
            self.recursive_delete(child);
         }
+        */
+        let mut hierarchy_w = self.hierarchy.w.lock();
+        //if the parent hasn't been found we return false
+        if !self.hierarchy.exists(parent) {
+            return false;
+        }
+        //if the current parent is a lief the function returns
+        if hierarchy_w.get_and(parent, |children| children.is_empty()).unwrap(){
+            return true;
+        }
+        hierarchy_w.get_and(parent, |children| {
+            for child in children{
+                on_delete(child.clone());
+                self.recursive_delete(child, on_delete);
+            }
+        });
+        //at  this point we lock the mutex, if that happened before the recursive call we would
+        // get a dead lock
+        let mut hierarchy_r = self.hierarchy.r;
+        hierarchy_w.clear(parent.clone());
         true
     }
 
@@ -84,10 +112,10 @@ impl World
     /// register_view::<TestView>()
     /// '''
     pub fn register_view<T>(&mut self)
-        where T: views::View<Item=entity::Entity> + 'static
+        where T: views::View<Item=entity::keytype> + 'static
     {
         self.views.push(views::ViewRef::new::<T>());
-        T::on_register(&self.hierarchy);
+        T::on_register(&self);
     }
 
     /// this function will create and add ann entity to the world as a child of the specified parent
@@ -95,24 +123,18 @@ impl World
     /// if the specified parent does not exist it will return an Error, otherwise an Ok containing the Entity index
     pub fn add_entity(& mut self, parent: u64) -> Result<u64, &str>
     {
-        let new_index: u64 = self.indexer.get_index();
-        match self.hierarchy.get_mut(&parent)
+        match self.hierarchy.insert_entity(&parent)
         {
-            Some(parent) => {
-                parent.1.insert(new_index);
-            }
-            None => return Err("unable to insert the entity in the hierarchy, parent not found")
+            Some(index) => Ok(index),
+            None        => Err("unable to insert the entity in the hierarchy, parent not found"),
         }
-        self.hierarchy.insert(new_index, (entity::Entity::new(), HashSet::new()));
-        self.update_views_on_added(new_index);
-        Ok(new_index)
     }
 
-    /// this function will destroy the specified entity and assign it's children to the spcified new parent.
+    /// this function will destroy the specified entity and assign it's children to the specified new parent.
     ///
     /// If you instead want to destroy all of the children use rem_entity_recursive
     /// # Errors
-    /// if the spcified entity does not exist it will return an Error, otherwise an empty Ok
+    /// if the specified entity does not exist it will return an Error, otherwise an empty Ok
     pub fn rem_entity(& mut self, entity:u64, new_parent: u64) -> Result<(), &str>
     {
         //moves all children
@@ -134,9 +156,8 @@ impl World
     /// if the spcified entity does not exist it will return an Error, otherwise an empty Ok
     pub fn rem_entity_recursive(& mut self, entity:u64) -> Result<(), &str>
     {
-        if self.recursive_delete(&entity)
+        if self.recursive_delete(&entity, |entity_index|self.update_views_on_removed(entity))
         {
-            self.update_views_on_removed(entity);
             return Ok(())
         }
         else

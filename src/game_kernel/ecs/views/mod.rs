@@ -1,8 +1,8 @@
 use super::entity;
 
-pub trait View: Iterator<Item=entity::Entity>
+pub trait View: Iterator<Item=entity::keytype>
 {
-    fn on_register(enity_map: &entity::AdjHashMap<entity::Entity>);
+    fn on_register(world: &super::World);
     fn on_enity_added(u64);
     fn on_enity_removed(u64);
 }
@@ -10,7 +10,7 @@ pub trait View: Iterator<Item=entity::Entity>
 //used by world to store the views that it registers
 pub struct ViewRef
 {
-    pub on_register:        fn(enity_map: &entity::AdjHashMap<entity::Entity>),
+    pub on_register:        fn(world: &super::World),
     pub on_enity_added:     fn(u64),
     pub on_enity_removed:   fn(u64),
 }
@@ -24,8 +24,8 @@ impl ViewRef
     }
 }
 
-pub trait ImmediateView: Iterator<Item=entity::Entity>
+pub trait ImmediateView: Iterator<Item=entity::keytype>
 {
-    fn new(enity_map: &entity::AdjHashMap<entity::Entity>) -> Box< ImmediateView<Item=entity::Entity> >
+    fn new(world: &super::World) -> Box< ImmediateView<Item=entity::keytype> >
         where Self: Sized;
 }

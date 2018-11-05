@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use evmap::ShallowCopy;
 
 pub trait Component
 {
