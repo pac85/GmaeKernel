@@ -51,7 +51,7 @@ impl ShallowCopy for Entity
 
 pub struct Entities{
     r: evmap::ReadHandle<keytype, Box<component::Component>>,
-    w: Mutex<evmap::WriteHandle<keytype, Box<component::Component>>>,
+    w: Mutex<evmap::WriteHandle<keytype, component::ComponentBox>>,
 }
 
 pub struct AdjHashMap
