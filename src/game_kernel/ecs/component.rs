@@ -11,12 +11,12 @@ pub trait Component
 
 pub trait ComponentEq
 {
-    fn equals_a(&self, other: &'static Component) -> bool;
+    fn equals_a(&self, other: &'static ComponentEq) -> bool;
 }
 
-impl<S: 'static + Component + PartialEq + Eq> ComponentEq for S
+impl<S: 'static + Component + PartialEq> ComponentEq for S
 {
-    fn equals_a(&self, other: &'static Component) -> bool {
+    fn equals_a(&self, other: &'static ComponentEq) -> bool {
         // Do a type-safe casting. If the types are different,
         // return false, otherwise test the values for equality.
         (&other as &Any)
@@ -25,35 +25,37 @@ impl<S: 'static + Component + PartialEq + Eq> ComponentEq for S
     }
 }
 
-pub struct ComponentBox<T = Component + PartialEq + Eq>
+trait ComponentBoxTrait: Component + ComponentEq{}
+
+pub struct ComponentBox
 {
-    boxed_component: Box<T>,
+    boxed_component: Box<ComponentBoxTrait>,
 }
 
-impl<S: 'static + Component + PartialEq + Eq> PartialEq for ComponentBox<S>
+impl PartialEq for ComponentBox
 {
-    fn eq(&self, other: &ComponentBox) -> bool {
+    fn eq(&self, other: &ComponentBoxTrait) -> bool {
         (**self).equals_a(other)
     }
 }
 
-impl<S: 'static + Component + PartialEq + Eq> Eq for ComponentBox<S>{}
+impl Eq for ComponentBox{}
 
-impl From<Box<Component>> for ComponentBox<Component>
+impl From<Box<Component>> for ComponentBox
 {
     fn from(boxed_component: Box<Component>) -> Self{
         return Self{boxed_component}
     }
 }
 
-impl ShallowCopy for ComponentBox<Component>
+impl ShallowCopy for ComponentBox
 {
     unsafe fn shallow_copy(&mut self) -> Self {
         self.boxed_component.shallow_copy()
     }
 }
 
-impl Deref for ComponentBox<Component> {
+impl Deref for ComponentBox {
     type Target = Component;
 
     fn deref(&self) -> &'static Component {
