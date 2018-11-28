@@ -50,7 +50,7 @@ impl ShallowCopy for Entity
 }*/
 
 pub struct Entities{
-    r: evmap::ReadHandle<keytype, Box<component::Component>>,
+    r: evmap::ReadHandle<keytype, component::ComponentBox>,
     w: Mutex<evmap::WriteHandle<keytype, component::ComponentBox>>,
 }
 
@@ -82,7 +82,7 @@ impl AdjHashMap
             return None;
         }
         let mut hierarchy_w = self.w.lock();
-        let mut hierarchy_r = self.r;
+        let hierarchy_r = &self.r;
 
         let new_index: u64 = self.indexer.get_index();
 

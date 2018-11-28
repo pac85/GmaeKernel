@@ -3,16 +3,16 @@ use super::entity;
 pub trait View: Iterator<Item=entity::keytype>
 {
     fn on_register(world: &super::World);
-    fn on_enity_added(u64);
-    fn on_enity_removed(u64);
+    fn on_enity_added(&u64);
+    fn on_enity_removed(&u64);
 }
 
 //used by world to store the views that it registers
 pub struct ViewRef
 {
     pub on_register:        fn(world: &super::World),
-    pub on_enity_added:     fn(u64),
-    pub on_enity_removed:   fn(u64),
+    pub on_enity_added:     fn(&u64),
+    pub on_enity_removed:   fn(&u64),
 }
 
 impl ViewRef

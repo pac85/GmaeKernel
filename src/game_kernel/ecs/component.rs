@@ -9,33 +9,32 @@ pub trait Component
     fn get_builder() -> fn()->Box<Component> where Self: Sized;
 }
 
-pub trait ComponentEq
+/*pub trait ComponentEq
 {
     fn equals_a(&self, other: &'static ComponentEq) -> bool;
 }
 
 impl<S: 'static + Component + PartialEq> ComponentEq for S
 {
-    fn equals_a(&self, other: &'static ComponentEq) -> bool {
+    fn equals_a(&self, other: &ComponentEq) -> bool {
         // Do a type-safe casting. If the types are different,
         // return false, otherwise test the values for equality.
         (&other as &Any)
             .downcast_ref::<S>()
             .map_or(false, |a| self == a)
     }
-}
-
-trait ComponentBoxTrait: Component + ComponentEq{}
+}*/
 
 pub struct ComponentBox
 {
-    boxed_component: Box<ComponentBoxTrait>,
+    boxed_component: Box<Component>,
 }
 
 impl PartialEq for ComponentBox
 {
-    fn eq(&self, other: &ComponentBoxTrait) -> bool {
-        (**self).equals_a(other)
+    fn eq(&self, other: &ComponentBox) -> bool {
+        //self.boxed_component.equals_a(other.boxed_component as &ComponentEq)
+        false
     }
 }
 
@@ -51,17 +50,17 @@ impl From<Box<Component>> for ComponentBox
 impl ShallowCopy for ComponentBox
 {
     unsafe fn shallow_copy(&mut self) -> Self {
-        self.boxed_component.shallow_copy()
+        ComponentBox{boxed_component: self.boxed_component.shallow_copy()}
     }
 }
 
-impl Deref for ComponentBox {
+/*impl Deref for ComponentBox {
     type Target = Component;
 
     fn deref(&self) -> &'static Component {
         self.boxed_component
     }
-}
+}*/
 
 pub struct ComponentFactory
 {

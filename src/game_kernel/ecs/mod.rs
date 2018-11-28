@@ -29,7 +29,7 @@ impl World
     fn move_children(&mut self, old_parent: &u64, new_parent: &u64) -> bool
     {
         let mut hierarchy_w = self.hierarchy.w.lock();
-        let mut hierarchy_r = self.hierarchy.r;
+        let hierarchy_r = &self.hierarchy.r;
         //checks if the new parent exists
         if !self.hierarchy.exists(new_parent)
         {
@@ -49,46 +49,32 @@ impl World
     }
 
     //deletes entities recursively
-    fn recursive_delete<F>(&mut self, parent: &u64, on_delete: F) -> bool
-        where F: FnOnce(u64)
+    fn recursive_delete(&mut self, parent: &u64) -> bool
     {
-        /*
-        let children = self.hierarchy.remove(parent);
-        if children.is_none()
-        {
-            return false;
-        }
-
-        let children = children.unwrap();
-        for child in children.1.iter()
-        {
-           self.recursive_delete(child);
-        }
-        */
-        let mut hierarchy_w = self.hierarchy.w.lock();
+        let hierarchy_r = &self.hierarchy.r.clone();
         //if the parent hasn't been found we return false
         if !self.hierarchy.exists(parent) {
             return false;
         }
         //if the current parent is a lief the function returns
-        if hierarchy_w.get_and(parent, |children| children.is_empty()).unwrap(){
+        if hierarchy_r.get_and(parent, |children| children.is_empty()).unwrap(){
             return true;
         }
-        hierarchy_w.get_and(parent, |children| {
+        hierarchy_r.get_and(parent, |children| {
             for child in children{
-                on_delete(child.clone());
-                self.recursive_delete(child, on_delete);
+                self.update_views_on_removed(child);
+                self.recursive_delete(child);
             }
         });
         //at  this point we lock the mutex, if that happened before the recursive call we would
         // get a dead lock
-        let mut hierarchy_r = self.hierarchy.r;
+        let mut hierarchy_w = self.hierarchy.w.lock();
         hierarchy_w.clear(parent.clone());
         true
     }
 
-    //this funvtion updates the views when an entity is added
-    fn update_views_on_added(&self, entity_index: u64)
+    //this function updates the views when an entity is added
+    fn update_views_on_added(&self, entity_index: &u64)
     {
         for view in self.views.iter()
         {
@@ -96,8 +82,8 @@ impl World
         }
     }
 
-    //this funvtion updates the views when an entity is added
-    fn update_views_on_removed(&self, entity_index: u64)
+    //this function updates the views when an entity is added
+    fn update_views_on_removed(&self, entity_index: &u64)
     {
         for view in self.views.iter()
             {
@@ -135,7 +121,7 @@ impl World
     /// If you instead want to destroy all of the children use rem_entity_recursive
     /// # Errors
     /// if the specified entity does not exist it will return an Error, otherwise an empty Ok
-    pub fn rem_entity(& mut self, entity:u64, new_parent: u64) -> Result<(), &str>
+    pub fn rem_entity(& mut self, entity: &u64, new_parent: u64) -> Result<(), &str>
     {
         //moves all children
         if self.move_children(&entity, &new_parent)
@@ -153,10 +139,10 @@ impl World
     ///
     /// If you instead want to assign all of the children to a specified entity use rem_entity
     /// # Errors
-    /// if the spcified entity does not exist it will return an Error, otherwise an empty Ok
+    /// if the specified entity does not exist it will return an Error, otherwise an empty Ok
     pub fn rem_entity_recursive(& mut self, entity:u64) -> Result<(), &str>
     {
-        if self.recursive_delete(&entity, |entity_index|self.update_views_on_removed(entity))
+        if self.recursive_delete(&entity)
         {
             return Ok(())
         }
