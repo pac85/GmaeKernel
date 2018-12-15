@@ -1,0 +1,11 @@
+[package]
+name = "game_kernel_utils"
+version = "0.1.0"
+authors = ["antonino <antomani103@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+
+#multithreading
+evmap = "4.0.0"
+parking_lot = "0.6.4"

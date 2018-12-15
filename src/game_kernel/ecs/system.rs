@@ -22,8 +22,18 @@ impl fmt::Display for SysErr
     }
 }
 
+struct SystemDeps
+{
+
+}
+
 trait System
 {
+    fn get_deps() -> &'static SystemDeps;
     fn init(config: &mut Config) -> Result<(), SysErr>;
-    fn run();
+}
+
+pub struct SystemManager
+{
+
 }

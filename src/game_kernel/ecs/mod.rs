@@ -9,6 +9,8 @@ pub mod system;
 
 mod views;
 
+use game_kernel_utils::hierarchy;
+
 use std::collections::HashSet;
 use std::collections::HashMap;
 use evmap::*;
@@ -24,55 +26,6 @@ pub struct World
 
 impl World
 {
-    //moves all the children from one parent to a new one, return false if it can't find
-    //the new parent, true otherwise
-    fn move_children(&mut self, old_parent: &u64, new_parent: &u64) -> bool
-    {
-        let mut hierarchy_w = self.hierarchy.w.lock();
-        let hierarchy_r = &self.hierarchy.r;
-        //checks if the new parent exists
-        if !self.hierarchy.exists(new_parent)
-        {
-            return false;
-        }
-        //copies all the children of old_parent to the new parent
-        hierarchy_r.get_and(&old_parent, |children|{
-            for child in children {
-                hierarchy_w.insert(new_parent.clone(), child.clone());
-            }
-        });
-        //removes the children from the old parent
-        hierarchy_w.clear(old_parent.clone());
-        hierarchy_w.flush();
-
-        true
-    }
-
-    //deletes entities recursively
-    fn recursive_delete(&mut self, parent: &u64) -> bool
-    {
-        let hierarchy_r = &self.hierarchy.r.clone();
-        //if the parent hasn't been found we return false
-        if !self.hierarchy.exists(parent) {
-            return false;
-        }
-        //if the current parent is a lief the function returns
-        if hierarchy_r.get_and(parent, |children| children.is_empty()).unwrap(){
-            return true;
-        }
-        hierarchy_r.get_and(parent, |children| {
-            for child in children{
-                self.update_views_on_removed(child);
-                self.recursive_delete(child);
-            }
-        });
-        //at  this point we lock the mutex, if that happened before the recursive call we would
-        // get a dead lock
-        let mut hierarchy_w = self.hierarchy.w.lock();
-        hierarchy_w.clear(parent.clone());
-        true
-    }
-
     //this function updates the views when an entity is added
     fn update_views_on_added(&self, entity_index: &u64)
     {
@@ -98,7 +51,7 @@ impl World
     /// register_view::<TestView>()
     /// '''
     pub fn register_view<T>(&mut self)
-        where T: views::View<Item=entity::keytype> + 'static
+        where T: views::View<Item=entity::Keytype> + 'static
     {
         self.views.push(views::ViewRef::new::<T>());
         T::on_register(&self);
@@ -124,7 +77,7 @@ impl World
     pub fn rem_entity(& mut self, entity: &u64, new_parent: u64) -> Result<(), &str>
     {
         //moves all children
-        if self.move_children(&entity, &new_parent)
+        if hierarchy::utils::move_children(&mut self.hierarchy,&entity, &new_parent)
         {
             self.update_views_on_removed(entity);
             Ok(())
@@ -142,7 +95,9 @@ impl World
     /// if the specified entity does not exist it will return an Error, otherwise an empty Ok
     pub fn rem_entity_recursive(& mut self, entity:u64) -> Result<(), &str>
     {
-        if self.recursive_delete(&entity)
+        let raw_self = self as *const Self;
+        let on_removed = |entity_index: &hierarchy::Keytype| {unsafe {(*raw_self).update_views_on_removed(&entity_index);}};
+        if hierarchy::utils::recursive_delete(&mut self.hierarchy,&entity, &on_removed)
         {
             return Ok(())
         }

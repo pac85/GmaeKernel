@@ -3,6 +3,7 @@ extern crate toml;
 extern crate serde_derive;
 extern crate evmap;
 extern crate parking_lot;
+extern crate game_kernel_utils;
 
 pub mod game_kernel
 {

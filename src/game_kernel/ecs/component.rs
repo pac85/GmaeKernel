@@ -57,8 +57,8 @@ impl ShallowCopy for ComponentBox
 /*impl Deref for ComponentBox {
     type Target = Component;
 
-    fn deref(&self) -> &'static Component {
-        self.boxed_component
+    fn deref(&self) -> &Component {
+        self.boxed_component.as_ref()
     }
 }*/
 

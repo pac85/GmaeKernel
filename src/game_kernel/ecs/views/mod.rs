@@ -1,6 +1,6 @@
 use super::entity;
 
-pub trait View: Iterator<Item=entity::keytype>
+pub trait View: Iterator<Item=entity::Keytype>
 {
     fn on_register(world: &super::World);
     fn on_enity_added(&u64);
@@ -24,8 +24,8 @@ impl ViewRef
     }
 }
 
-pub trait ImmediateView: Iterator<Item=entity::keytype>
+pub trait ImmediateView: Iterator<Item=entity::Keytype>
 {
-    fn new(world: &super::World) -> Box< ImmediateView<Item=entity::keytype> >
+    fn new(world: &super::World) -> Box< ImmediateView<Item=entity::Keytype> >
         where Self: Sized;
 }

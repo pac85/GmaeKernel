@@ -13,8 +13,8 @@ fn log(msg: Message)
     match msg
     {
         Message::Message(s) => {println!("[  ok   ] {}", s);},
-        Message::Warning(s) => {println!("[  {}   ] {}","warn".yellow() ,s);},
-        Message::Error(s)   => {println!("[  {}   ] {}","err".red() ,s);},
+        Message::Warning(s) => {println!("[  {} ] {}","warn".yellow() ,s);},
+        Message::Error(s)   => {println!("[  {}  ] {}","err".red() ,s);},
     }
 }
 
