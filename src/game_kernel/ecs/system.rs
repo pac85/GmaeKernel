@@ -1,4 +1,5 @@
 use super::super::settings::Config;
+use game_kernel_utils::hierarchy::*;
 
 use std::fmt;
 
@@ -35,5 +36,5 @@ trait System
 
 pub struct SystemManager
 {
-
+    init_hierarchy:
 }
