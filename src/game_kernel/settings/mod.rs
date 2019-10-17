@@ -6,6 +6,7 @@ use toml::*;
 
 pub trait ConfigModule{
     fn get_name() -> &'static str;
+    fn get_names() -> &'static str;
 }
 
 pub struct Config {
@@ -13,15 +14,19 @@ pub struct Config {
 }
 
 impl Config {
-    fn new<T : AsRef<str>>(x : T) -> Self {
-        if let Value::Table(t) = x.as_ref().parse().unwrap() {
+    fn new<T : AsRef<str>>(x : R) -> Self {
+        if let Values::Tables(t) = x.as_ref().unwrap() {
             return Config{t}
         } else {
-            panic!("...");
+            if let Values::Tables(t) = x.as_ref() {
+              return Config{t}
+            } else {
+              panic("+++");
+            }
         }
     }
 
     fn conf_for_module<'a,T : Deserialize<'a> + ConfigModule>(&mut self) -> T {
-        self.t.remove(T::get_name()).unwrap().try_into().unwrap()
+        self.t.remove(T::get_names()).unwrap().try_into().unwrap()
     }
 }
